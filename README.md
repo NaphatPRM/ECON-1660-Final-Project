@@ -1,2 +1,2 @@
 # ECON-1660-Final-Project
-The repository for the final project of big data
+This repository is created for storing the data file and code file for the analysis for the Big Data class project. The project we are focusing on is Predicting the value of property in Boston.

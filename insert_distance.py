@@ -16,7 +16,18 @@ def distanceDetermine(firstPlace, secondPlace):
     geolocator = Nominatim(user_agent="myGeocoder")
     location = geolocator.geocode(firstPlace)
     location2 = geolocator.geocode(secondPlace)
-    return distance((location.latitude, location.longitude), (location2.latitude, location2.longitude))
+    if location is None:
+        location = geolocator.geocode(firstPlace.split(",")[1] + ", BOSTON")
+    elif "MEDORD" in firstPlace:
+        location = geolocator.geocode(firstPlace.split(",")[0] + ", MEDFORD")
+    if location2 is None:
+        location2 = geolocator.geocode(secondPlace.split(",")[1] + ", BOSTON")
+    elif "MEDORD" in secondPlace:
+        location2 = geolocator.geocode(secondPlace.split(",")[0] + ", MEDFORD")
+    if location is None or location2 is None:
+        print(firstPlace)
+        print(secondPlace)
+    return float(distance((location.latitude, location.longitude), (location2.latitude, location2.longitude)).km)
 
 
-print(distanceDetermine("195 LEXINGTON ST EAST BOSTON", "28 LAUDHOLM RD NEWTON"))
+print(distanceDetermine("4105 SW NATIVESTONE ST, BENTONVILLE", "55 NEW DUDLEY, ROXBURY"))

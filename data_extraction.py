@@ -1,4 +1,6 @@
 import csv
+import time
+
 import numpy as np
 import matplotlib.pyplot as plt
 from insert_distance import distanceDetermine
@@ -78,21 +80,21 @@ def straightLASSO(list_list_result, list_list_target):
     return clf
 
 
-def listSchool(file_name):
+def listSchool(file_name, target_name):
     list_school = []
     with open(file_name, newline="") as csvFile:
         reader = csv.DictReader(csvFile)
         for element_school in list(reader):
-            if "school" in element_school["LU_DESC"].lower() and "BENTONVILLE" not in element_school["MAIL_CITY"]:
+            if target_name in element_school["LU_DESC"].lower() and "BENTONVILLE" not in element_school["MAIL_CITY"]:
                 list_school.append({"Location": element_school["MAIL_ADDRESS"] + ", " + element_school["MAIL_CITY"],
                                     "Total_Value": cleanData(element_school["TOTAL_VALUE"])})
         list_school_sorted = sorted(list_school, key=lambda d: d['Total_Value'], reverse=True)
         return list_school_sorted[:20]
 
 
-def distanceSchoolStorage(file_read, file_write, index_start, increments, type_focus):
+def distanceSchoolStorage(file_read, file_write, index_start, increments, type_focus, target_name):
     with open(file_read, newline="") as csvFile:
-        list_school = listSchool(file_read)
+        list_school = listSchool(file_read, target_name)
         list_pair = []
         reader = csv.DictReader(csvFile)
         print(len(list_school))
@@ -102,22 +104,32 @@ def distanceSchoolStorage(file_read, file_write, index_start, increments, type_f
                 location_focus = element_other["MAIL_ADDRESS"] + ", " + element_other["MAIL_CITY"]
                 # total_distance = sum(list(map(lambda x: weightResult(location_focus, x), list_school)))
                 list_pair.append(
-                    (location_focus, float(element_other["GROSS_TAX"].strip("$").replace(",", "").strip())))
+                    (element_other["PID"], location_focus, float(element_other["GROSS_TAX"].strip("$").replace(",", "").strip())))
         print(len(list_pair))
         with open(file_write, 'a') as file:
             writer = csv.writer(file)
-            writer.writerow(["total_distance", "gross_tax"])
+            writer.writerow(["PID", "total_distance", "gross_tax"])
+            counter = 0
             for i in range(index_start, index_start + increments):
-                total_distance = sum(list(map(lambda x: weightResult(list_pair[i][0], x), list_school)))
-                writer.writerow([total_distance, list_pair[i][1]])
+                print(i)
+                if counter == 10:
+                    time.sleep(30.0)
+                    counter = 0
+                if "5TH FLOOR" not in list_pair[i][1]:
+                    counter += 1
+                    total_distance_list = list(map(lambda x: weightResult(list_pair[i][1], x), list_school))
+                    if None not in total_distance_list:
+                        writer.writerow([list_pair[i][0], sum(total_distance_list), list_pair[i][2]])
 
 
 def distanceSchool(file_name, type_focus):
     with open(file_name, newline="") as csvFile:
         reader = csv.DictReader(csvFile)
         reader = list(reader)
-        list_distance = list(map(lambda x: x["total_distance"], reader))
-        list_gross_tax = list(map(lambda x: x["gross_tax"], reader))
+        reader = filter(lambda diction: float(diction["total_distance"]) < 10 ** 11, reader)
+        reader = sorted(reader, key=lambda u: u["total_distance"])
+        list_distance = list(map(lambda x: float(x["total_distance"]), reader))
+        list_gross_tax = list(map(lambda x: float(x["gross_tax"]), reader))
         list_distance = np.array(list(map(lambda y: y/(10.0 ** 6), list_distance)))
         list_gross_tax = np.array(list_gross_tax)
         list_distance = list_distance.reshape(-1, 1)
@@ -132,11 +144,19 @@ def distanceSchool(file_name, type_focus):
 
 
 def weightResult(firstLocation, secondMap):
-    return distanceDetermine(firstLocation, secondMap["Location"]) * secondMap["Total_Value"]
+    if distanceDetermine(firstLocation, secondMap["Location"]) is not None:
+        return distanceDetermine(firstLocation, secondMap["Location"]) * secondMap["Total_Value"]
+    else:
+        return None
 
 
 # result, target = fileParsingProperty("Property2022.csv")
 # straightLASSO(result, target)
 # normalPlot_Regression("Property2022.csv", "LIVING_AREA", "GROSS_TAX")
 # fileParsingOther("Neighbourhood_files/Race-Table 1.csv")
-distanceSchoolStorage("Property2022.csv", "WeightedDistanceTHREE-FAM.csv", 41, 20, "THREE-FAM")
+# distanceSchoolStorage("Property2022.csv", "WeightedDistanceCONDOFull.csv", 67, 300, "CONDO", "school")
+# distanceSchoolStorage("Property2022.csv", "WeightedDistanceCONDOFullOff.csv", 1, 300, "CONDO", "office")
+distanceSchoolStorage("Property2022.csv", "WeightedDistanceTWO-FAMFullOff.csv", 148, 300, "TWO-FAM", "office")
+distanceSchoolStorage("Property2022.csv", "WeightedDistanceTWO-FAMFull.csv", 204, 300, "TWO-FAM", "school")
+
+# distanceSchool("WeightedDistanceTHREE-FAM.csv", "THREE-FAM")
